@@ -22,8 +22,8 @@ ansible_vmid_group: '\[<ansible_group_name>\]'
 ############ SATELLITE VARIABLES ################################################
 # Shell command: subscription-manager register --org <> --activationkey <>
 satellite_subscription: no  # yes/no, if no disregards this block variables
-satellite_organisation: 
-satellite_activatin_key:
+satellite_organization: 
+satellite_activation_key:
 
 ############ ZABBIX VARIABLES ###################################################
 # This work with zabbix autoregistration
@@ -41,15 +41,15 @@ guest_nic:
   net: net0
   type: virtio 
   bridge_id: <proxmox_bridge_name> # vmbr0/vmbr1... 
-  fw: 1  # 1/0 to enable or disabled proxmox firewall
+  fw: 1  # 1/0 to enable or disabled proxmox firewall.
 
 ############ STORAGE VARIABLES ##################################################
 storage_host: <proxmox_storage_id>
 storage_format: <storage_disk_format>  # raw,qcow2..
 
 ############ MISC VARIABLES #####################################################
-start_on_boot: no   # yes/no, start the guest when the host poweron/reboot.
-dnf_update: no     # yes/no, Run dnf update at the end of the deployment.
+start_on_boot: no  # yes/no, start the guest when the host poweron/reboot.
+dnf_update: no  # yes/no, Run dnf update at the end of the deployment.
 
 ############ GUESTS VARIABLES ###################################################
 # You can deploy miltiples guests per playbook, copy paste the "guest" block
