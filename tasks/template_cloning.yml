@@ -1,0 +1,102 @@
+---
+- name: Cloning {{ item.guest.guest_name }} from template {{ template_name }}
+  community.general.proxmox_kvm:
+    api_user: "{{ pve_api_user }}"
+    api_token_id: "{{ pve_api_token_id }}"
+    api_token_secret: "{{ pve_api_token_secret }}"
+    api_host: "{{ pve_api_host }}"
+    clone: "{{ template_name }}"
+    vmid: "{{ template_id }}"
+    name: "{{ item.guest.guest_name }}"
+    node: "{{ item.guest.compute_host }}"
+    storage: "{{ storage_host }}"
+    format: "{{ storage_format }}"
+    full: yes
+    timeout: 600
+    state: present
+  register: clone_output
+
+- name: Update {{ item.guest.guest_name }} hardware configuration
+  community.general.proxmox_kvm:
+    api_user: "{{ pve_api_user }}"
+    api_token_id: "{{ pve_api_token_id }}"
+    api_token_secret: "{{ pve_api_token_secret }}"
+    api_host: "{{ pve_api_host }}"
+    name: "{{ item.guest.guest_name }}"
+    node: "{{ item.guest.compute_host }}"
+    cores: "{{ item.guest.guest_cores }}"
+    memory: "{{ item.guest.guest_ram }}"
+    onboot: "{{ start_on_boot }}"
+    vmid: "{{ clone_output.vmid }}"
+    update: true
+
+- name: Update {{ item.guest.guest_name }} network interface
+  community.general.proxmox_nic:
+    api_user: "{{ pve_api_user }}"
+    api_token_id: "{{ pve_api_token_id }}"
+    api_token_secret: "{{ pve_api_token_secret }}"
+    api_host: "{{ pve_api_host }}"
+    name: "{{ item.guest.guest_name }}"
+    vmid: "{{ clone_output.vmid }}"
+    interface: "{{ guest_nic.net }}"
+    model: "{{ guest_nic.type }}"
+    bridge: "{{ guest_nic.bridge_id }}"
+    firewall: "{{ guest_nic.fw }}"
+    state: present
+
+- name: Start {{ item.guest.guest_name }}
+  community.general.proxmox_kvm:
+    api_user: "{{ pve_api_user }}"
+    api_token_id: "{{ pve_api_token_id }}"
+    api_token_secret: "{{ pve_api_token_secret }}"
+    api_host: "{{ pve_api_host }}"
+    name: "{{ item.guest.guest_name }}"
+    vmid: "{{ clone_output.vmid }}"
+    node: "{{ item.guest.compute_host }}"
+    state: started
+
+- name: Add {{ item.guest.guest_name }} to ansible inventory
+  lineinfile:
+    path: "{{ ansible_inventory_path }}"
+    insertafter: "{{ ansible_group }}"
+    line: "{{ item.guest.guest_name | lower }} ansible_host={{ item.guest.guest_name | lower }}.{{ domain }}"
+  when: add_ansible_inv
+
+- name: Add {{ item.guest.guest_name }} VMID to ansible inventory
+  lineinfile:
+    path: "{{ ansible_inventory_path }}"
+    insertafter: "{{ ansible_vmid_group }}"
+    line: "{{ clone_output.vmid }} ansible_host={{ item.guest.guest_name | lower }}.{{ domain }}"
+  when: add_ansible_inv_id
+
+- name: Wait for {{ item.guest.guest_name }} to be available
+  wait_for_connection:
+  delegate_to: "{{ template_inventory_name }}"
+  when: clone_output.changed
+
+- name: Add {{ item.guest.guest_name }} to the play
+  add_host:
+    name: "{{ item.guest.guest_ipv4.split('/')[0] }}"
+
+- name: Update {{ item.guest.guest_name }} network config
+  nmcli:
+    type: ethernet
+    conn_name: "{{ template_connection_name }}"
+    ip4: "{{ item.guest.guest_ipv4 }}"
+    gw4: "{{ gateway }}"
+    dns4: "{{ dns_ip }}"
+    dns4_search: "{{ domain }}"
+    state: present
+  delegate_to: "{{ template_inventory_name }}"
+  when: clone_output.changed
+
+- name: Reboot {{ item.guest.guest_name }}
+  community.general.proxmox_kvm:
+    api_user: "{{ pve_api_user }}"
+    api_token_id: "{{ pve_api_token_id }}"
+    api_token_secret: "{{ pve_api_token_secret }}"
+    api_host: "{{ pve_api_host }}"
+    name: "{{ item.guest.guest_name }}"
+    node: "{{ item.guest.compute_host }}"
+    state: restarted
+  when: clone_output.changed

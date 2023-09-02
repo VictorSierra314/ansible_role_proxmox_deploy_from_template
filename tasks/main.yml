@@ -1,0 +1,31 @@
+---
+# tasks file for proxmox_deploy_from_template
+#
+- name: Clone guest
+# Clone the template,
+# ruUpdate the hardware/network conf and reboot to apply changes.
+# If the guest exist most of the task will not run, check the README.
+  include_tasks: template_cloning.yml
+  loop: "{{ new_guests }}" 
+
+- name: Wait for all guest to be available
+# Previous task reboot the guest with Proxmox API.
+# This confirm all host availabliity before running any more tasks.
+  wait_for_connection:
+  delegate_to: "{{ item.guest.guest_ipv4.split('/')[0] }}"
+  loop: "{{ new_guests }}" 
+
+- name: Set Zabbix configuration
+# Only if set_zabbix is set to yes in defaults variables.
+# You need to have Zabbix autoregistration configured.
+# And the condition based on the Host metadata value.
+  include_tasks: zabbix_configuration.yml
+  when: set_zabbix
+  loop: "{{ new_guests }}" 
+
+- name: Update guest hostname and packages
+# Set guest hostname and /ets/hosts file.
+# Subscribe to Satellite if satellite_subscription: yes in defaults variables.
+# Run dnf update if dnf_update is set to yes in defaults variables and reboot.
+  include_tasks: update_guest.yml
+  loop: "{{ new_guests }}"

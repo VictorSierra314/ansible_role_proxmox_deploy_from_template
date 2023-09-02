@@ -1,0 +1,28 @@
+---
+- name: Set {{ item.guest.guest_name }} hosts file
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+  delegate_to: "{{ item.guest.guest_ipv4.split('/')[0] }}"
+
+- name: Set {{ item.guest.guest_name }} hostname
+  hostname:
+    name: "{{ item.guest.guest_name | lower }}.{{ domain }}" 
+    use: systemd
+  delegate_to: "{{ item.guest.guest_ipv4.split('/')[0] }}"
+
+- name: Subscribe {{ item.guest.guest_name }} to Satellite
+  shell: "subscription-manager register --org {{ satellite_organisation }} --activationkey {{ satellite_activatin_key }}"
+  delegate_to: "{{ item.guest.guest_ipv4.split('/')[0] }}"
+  when: satellite_subscription
+
+- name: Update {{ item.guest.guest_name }} packages
+  dnf:
+    name: '*'
+    state: latest
+  delegate_to: "{{ item.guest.guest_ipv4.split('/')[0] }}"
+  when: dnf_update
+
+- name: Reboot {{ item.guest.guest_name }}
+  reboot:
+  delegate_to: "{{ item.guest.guest_ipv4.split('/')[0] }}"

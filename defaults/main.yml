@@ -1,0 +1,70 @@
+---
+# defaults file for proxmox_deploy_from_template
+#
+############ TEMPLATE VARIABLES #################################################
+template_name: <template_name>
+template_id: <template_vmid>
+# network interface id
+template_connection_name: <template_nic_id> # eth0/ens18..
+# Ansible inventory name used after cloning
+template_inventory_name: <template_ansible_inventory_hostname>
+
+############ ANSIBLE VARIABLES ##################################################
+# This is optional, if you want to update your ansible inventory after deployment
+ansible_inventory_path: /etc/ansible/hosts
+# Update the inventory with the guest hostname
+add_ansible_inv: no  # yes/no, if no disregards ansible_group
+ansible_group: '\[<ansible_group_name>\]'
+# Update the inventory with the guest VMID
+add_ansible_inv_id: no  # yes/no, if no disregards ansible_vmid_group
+ansible_vmid_group: '\[<ansible_group_name>\]'
+
+############ SATELLITE VARIABLES ################################################
+# Shell command: subscription-manager register --org <> --activationkey <>
+satellite_subscription: no  # yes/no, if no disregards this block variables
+satellite_organisation: 
+satellite_activatin_key:
+
+############ ZABBIX VARIABLES ###################################################
+# This work with zabbix autoregistration
+set_zabbix: no  # yes/no, if no disregards this block variables
+zabbix_server_ip: <zabbix_server_ipv4>
+zabbix_server_port: <zabbix_server_tcp/port>
+zabbix_metadata_group: <autoregistration_metadata_group_name>
+
+############ NETWORK VARIABLES ##################################################
+# Guest ip is defined in the guest variable block, everything else is here
+gateway: <gateway_ipv4>
+dns_ip: <dns_ipv4> 
+domain: <domaine.loc>
+guest_nic: 
+  net: net0
+  type: virtio 
+  bridge_id: <proxmox_bridge_name> # vmbr0/vmbr1... 
+  fw: 1  # 1/0 to enable or disabled proxmox firewall
+
+############ STORAGE VARIABLES ##################################################
+storage_host: <proxmox_storage_id>
+storage_format: <storage_disk_format>  # raw,qcow2..
+
+############ MISC VARIABLES #####################################################
+start_on_boot: no   # yes/no, start the guest when the host poweron/reboot.
+dnf_update: no     # yes/no, Run dnf update at the end of the deployment.
+
+############ GUESTS VARIABLES ###################################################
+# You can deploy miltiples guests per playbook, copy paste the "guest" block
+# You can use upper cases in the guest_name, lower cases will be used when needed
+# The compute_host is the PVE node used to deploy the guest
+new_guests:
+  - guest:
+      guest_name: Guest1
+      guest_cores: 2
+      guest_ram: 2048
+      guest_ipv4: 192.168.0.100/24
+      compute_host: <pve_node_name>
+  - guest:
+      guest_name: Guest2
+      guest_cores: 2
+      guest_ram: 2048
+      guest_ipv4: 192.168.0.101/24
+      compute_host: <pve_node_name>
